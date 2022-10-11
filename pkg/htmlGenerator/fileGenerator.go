@@ -7,7 +7,7 @@ import (
 )
 
 func createHTML(filename string) (*os.File, error) {
-	filepath := "data/html/clients/" + filename + ".html"
+	filepath := "./data/static/html/" + filename + ".html"
 	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, err
@@ -16,7 +16,7 @@ func createHTML(filename string) (*os.File, error) {
 }
 
 func Generate(dataPath string) error {
-	tmpl, err := template.ParseFiles("data/html/template.html")
+	tmpl, err := template.ParseFiles("./data/static/templates/client.gohtml")
 	if err != nil {
 		return err
 	}
@@ -26,7 +26,7 @@ func Generate(dataPath string) error {
 	}
 	for _, itemI := range itemsI {
 		item := itemI.(*Workbook)
-		file, err := createHTML(item.Name)
+		file, err := createHTML("clients/" + item.Name)
 		if err != nil {
 			println(err.Error())
 			continue
