@@ -8,5 +8,5 @@ type Parser struct {
 	SkipFirstLine   bool
 	SkipEmptyValues bool
 	PRNReader       func(raw string) (line []string, err error)
-	CustomDecoder   *encoding.Decoder
+	Decoder         *encoding.Decoder
 }

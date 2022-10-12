@@ -1,6 +1,7 @@
 package formatParser
 
 import (
+	"TestTask/pkg/logger"
 	"bytes"
 	"golang.org/x/text/encoding/charmap"
 	"io/ioutil"
@@ -9,6 +10,9 @@ import (
 	"strings"
 )
 
+var infoLogger = logger.NewLogger("parser", "INFO")
+var errorLogger = logger.NewLogger("parser", "ERROR")
+
 func GetData(filepath string, f interface{}) (results []interface{}, err error) {
 	splited := strings.Split(filepath, ".")
 	if splited[len(splited)-1] == "csv" {
@@ -16,7 +20,7 @@ func GetData(filepath string, f interface{}) (results []interface{}, err error) 
 	} else if splited[len(splited)-1] == "prn" {
 		return getPRN(filepath, f)
 	} else {
-		println("Unknown format")
+		errorLogger.Printf("format error %s", splited[len(splited)-1])
 		return nil, err
 	}
 }
@@ -24,11 +28,12 @@ func GetData(filepath string, f interface{}) (results []interface{}, err error) 
 func getPRN(filepath string, f interface{}) (results []interface{}, err error) {
 	parser := Parser{
 		File:          filepath,
-		CustomDecoder: charmap.ISO8859_1.NewDecoder(),
+		Decoder:       charmap.ISO8859_1.NewDecoder(),
 		SkipFirstLine: true,
 		PRNReader: func(raw string) (line []string, err error) {
 			runes := []rune(raw)
 			if len(runes) < 74 {
+				errorLogger.Printf("len < 74 %s", err.Error())
 				return nil, err
 			}
 			line = append(line, strings.TrimSpace(string(runes[0:16])))
@@ -42,20 +47,23 @@ func getPRN(filepath string, f interface{}) (results []interface{}, err error) {
 	}
 	items, err := parser.parse(f)
 	if err != nil {
+		errorLogger.Printf("parse error: %s", err.Error())
 		return nil, err
 	}
+	infoLogger.Printf("parse %s", filepath)
 	return items, nil
 }
 
 func getCSV(filepath string, f interface{}) (results []interface{}, err error) {
 	parser := Parser{
 		File:          filepath,
-		CustomDecoder: charmap.ISO8859_1.NewDecoder(),
+		Decoder:       charmap.ISO8859_1.NewDecoder(),
 		Separator:     ',',
 		SkipFirstLine: true,
 	}
 	items, err := parser.parse(f)
 	if err != nil {
+		errorLogger.Printf("parse error: ")
 		return nil, err
 	}
 	return items, nil
@@ -64,15 +72,18 @@ func getCSV(filepath string, f interface{}) (results []interface{}, err error) {
 func (parser Parser) parse(f interface{}) (results []interface{}, error error) {
 	csvFile, err := os.Open(parser.File)
 	if err != nil {
+		errorLogger.Printf("open file error: %s", err.Error())
 		return nil, err
 	}
 	defer csvFile.Close()
 	fileBytes, err := ioutil.ReadAll(csvFile)
 	if err != nil {
+		errorLogger.Printf("read error: %s", err.Error())
 		return nil, err
 	}
-	decoded, err := parser.CustomDecoder.Bytes(fileBytes)
+	decoded, err := parser.Decoder.Bytes(fileBytes)
 	if err != nil {
+		errorLogger.Printf("parse decode")
 		return nil, err
 	}
 	n := bytes.IndexByte(fileBytes, 0)
@@ -84,9 +95,15 @@ func (parser Parser) parse(f interface{}) (results []interface{}, error error) {
 	switch extension {
 	case ".csv":
 		results, err = parser.GetCSVData(f, decoded, n)
+		if err != nil {
+			errorLogger.Printf("Get data error: %s", err.Error())
+		}
 		return results, err
 	case ".prn":
 		results, err = parser.GetPRNData(f, decoded, n)
+		if err != nil {
+			errorLogger.Printf("Get data error: %s", err.Error())
+		}
 		return results, err
 	default:
 		return nil, err

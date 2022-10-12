@@ -3,7 +3,6 @@ package formatParser
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -24,7 +23,7 @@ func (parser Parser) GetPRNData(f interface{}, decoded []byte, n int) (parsed []
 
 		rawLine, err = parser.PRNReader(r)
 		if err != nil {
-			log.Println("Error splitting fields, check input file:", err)
+			errorLogger.Printf("error splitting fields, check input file: %s", err)
 		}
 
 		var newResult = reflect.New(resultType).Interface()
@@ -112,7 +111,7 @@ func (parser Parser) GetPRNData(f interface{}, decoded []byte, n int) (parsed []
 		parsed = append(parsed, newResult)
 	}
 	if err = scanner.Err(); err != nil {
-		log.Println("Error reading from CSV file:", err)
+		errorLogger.Printf("error reading from PRN file: %s", err)
 		return nil, err
 	}
 	return parsed, nil
