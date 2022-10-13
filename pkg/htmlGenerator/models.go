@@ -1,6 +1,6 @@
 package htmlGenerator
 
-type Workbook struct {
+type FileModel struct {
 	Name        string `csv:"0" json:"name"`
 	Address     string `csv:"1" json:"address"`
 	Postcode    string `csv:"2" json:"postcode"`

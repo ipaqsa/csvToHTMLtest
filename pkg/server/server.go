@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 )
 
 var infoLogger = logger.NewLogger("server", "INFO")
@@ -34,7 +35,7 @@ func answerReport(w http.ResponseWriter, datas string) {
 func Start(port string) {
 	fs := http.FileServer(http.Dir("./data/static"))
 	http.Handle("/", fs)
-	http.HandleFunc("/file", upload)
+	http.HandleFunc("/file", uploadHandler)
 	http.HandleFunc("/main", mainHandler)
 	http.HandleFunc("/clear", clearHandler)
 	http.HandleFunc("/save", saveHandler)
@@ -81,32 +82,37 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func upload(w http.ResponseWriter, r *http.Request) {
+func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
-		infoLogger.Printf("New POST-request on /file")
+		infoLogger.Printf("new POST-request on /file")
 		err := r.ParseMultipartForm(32 << 20)
 		if err != nil {
-			errorLogger.Printf("Parse from client error: %s", err.Error())
+			errorLogger.Printf("parse from client error: %s", err.Error())
 			answerReport(w, err.Error())
 			return
 		}
 		file, handler, err := r.FormFile("file")
+		defer file.Close()
 		if err != nil {
-			errorLogger.Printf("Get file error: %s", err.Error())
+			errorLogger.Printf("get file error: %s", err.Error())
 			answerReport(w, err.Error())
 			return
 		}
-		defer file.Close()
+		splited := strings.Split(handler.Filename, ".")
+		if splited[len(splited)-1] != "prn" && splited[len(splited)-1] != "csv" {
+			errorLogger.Printf("format is not support")
+			answerReport(w, "Файл должен быть csv или prn")
+			return
+		}
 		f, err := os.OpenFile("./data/downloads/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
 		if err != nil {
-			errorLogger.Printf("Open file ./data/downloads/%s error: %s", handler.Filename, err.Error())
+			errorLogger.Printf("open file ./data/downloads/%s error: %s", handler.Filename, err.Error())
 			answerReport(w, err.Error())
 			return
 		}
-		infoLogger.Printf("Create file %s", handler.Filename)
+		infoLogger.Printf("create file %s", handler.Filename)
 		defer f.Close()
 		io.Copy(f, file)
-
 		err = htmlGenerator.Generate("./data/downloads/" + handler.Filename)
 		if err != nil {
 			errorLogger.Printf("HTML generate errorL %s", err.Error())
@@ -132,7 +138,7 @@ func clearHandler(w http.ResponseWriter, r *http.Request) {
 func saveHandler(w http.ResponseWriter, r *http.Request) {
 	err := utils.ZipWriter("./data/static/html/clients/")
 	if err != nil {
-		errorLogger.Printf("Ziper error: %s", err.Error())
+		errorLogger.Printf("ziper error: %s", err.Error())
 		return
 	}
 	w.Header().Set("Content-Disposition", "attachment; filename=archive.zip")

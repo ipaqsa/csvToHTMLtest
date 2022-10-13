@@ -27,13 +27,14 @@ func Generate(dataPath string) error {
 		errorLogger.Printf("template parse error: %s", err.Error())
 		return err
 	}
-	itemsI, err := formatParser.GetData(dataPath, Workbook{})
+	itemsI, err := formatParser.GetData(dataPath, FileModel{})
 	if err != nil {
 		errorLogger.Printf("format parser error: %s", err.Error())
+		return err
 	}
 	infoLogger.Printf("parse data from %s", dataPath)
 	for _, itemI := range itemsI {
-		item := itemI.(*Workbook)
+		item := itemI.(*FileModel)
 		file, err := createHTML("clients/" + item.Name)
 		if err != nil {
 			errorLogger.Printf("create HTML %s error %s", item.Name, err.Error())
