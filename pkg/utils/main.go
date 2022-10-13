@@ -97,13 +97,19 @@ func CreateMainHTML() {
              </ul>
          </nav>
      </header>
+
      <div id="wrap">
+     <button class="button" id="clear-btn" style="margin-left: 0;">Очистить</button>
+     <form action="/save" method="post">
+        <button class="button" id="save-btn">Скачать архив</button>
+     </form>
+     <hr>
         {{range .FilesNames}}
         <p class="wrap"><a href="/main?file={{.}}">{{.}}</a></p>
     	{{end}}
     </div>
 </body>
-
+<script src="/js/main.js"></script>
 </html>`))
 }
 
@@ -113,58 +119,74 @@ func CreateMainJS() {
 	if err != nil {
 		return
 	}
-	file.Write([]byte(`let dropArea = document.getElementById('drop-area')
-					
-					;['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-						dropArea.addEventListener(eventName, preventDefaults, false)
-					})
-					function preventDefaults (e) {
-						e.preventDefault()
-						e.stopPropagation()
-					}
-					
-					;['dragenter', 'dragover'].forEach(eventName => {
-						dropArea.addEventListener(eventName, highlight, false)
-					})
-					
-					;['dragleave', 'drop'].forEach(eventName => {
-						dropArea.addEventListener(eventName, unhighlight, false)
-					})
-					
-					function highlight(e) {
-						dropArea.classList.add('highlight')
-					}
-					function unhighlight(e) {
-						dropArea.classList.remove('highlight')
-					}
-					
-					dropArea.addEventListener('drop', handleDrop, false)
-					function handleDrop(e) {
-						let dt = e.dataTransfer
-						let files = dt.files
-						handleFiles(files)
-					}
-					
-					function handleFiles(files) {
-						([...files]).forEach(uploadFile)
-					}
-					
-					function uploadFile(file) {
-						let url = 'file'
-						let formData = new FormData()
-						let data
-						formData.append('file', file)
-						fetch(url, {
-							method: 'POST',
-							body: formData
-						}) .then((response) => {
-								return response.json()
-							})
-							.then(async (response) => {
-								data = await response.data
-								window.location.replace("/?status="+data);
-							})
-					}`))
+	file.Write([]byte(`let dropArea = document.getElementById('drop-area');
+let clearBtn = document.getElementById('clear-btn');
+
+if (dropArea) {
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, preventDefaults, false)
+    })
+    
+    function preventDefaults(e) {
+        e.preventDefault()
+        e.stopPropagation()
+    }
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, highlight, false)
+    })
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, unhighlight, false)
+    })
+    
+    function highlight(e) {
+        dropArea.classList.add('highlight')
+    }
+    
+    function unhighlight(e) {
+        dropArea.classList.remove('highlight')
+    }
+    dropArea.addEventListener('drop', handleDrop, false)
+    
+}
+
+function handleDrop(e) {
+    let dt = e.dataTransfer
+    let files = dt.files
+    handleFiles(files)
+}
+
+function handleFiles(files) {
+    ([...files]).forEach(uploadFile)
+}
+
+function uploadFile(file) {
+    let url = 'file'
+    let formData = new FormData()
+    let data
+    formData.append('file', file)
+    fetch(url, {
+            method: 'POST',
+            body: formData
+        }).then((response) => {
+            return response.json()
+        })
+        .then(async (response) => {
+            data = await response.data
+            alert(data)
+        	window.location.href = "/main"
+        })
+}
+clearBtn.addEventListener("click", clear)
+function clear(e) {
+    let url = 'clear'
+    fetch(url, {
+        method: 'POST'
+    }).then(async (response) => {
+        window.location.href = "/main"
+    })
+}`))
 }
 
 func CreateMainCSS() {
@@ -220,12 +242,6 @@ func CreateMainCSS() {
     margin: 14%;
     padding: 4%;
     border-radius: 15mm;
-}
-
-body {
-    background-color: #3d1ec9;
-    background-size: cover;
-    font-family: sans-serif;
 }
 
 main {
@@ -502,21 +518,25 @@ func GetFileList(path string) []string {
 	return names
 }
 
-func ZipWriter(path string) {
-	outFile, err := os.Create(`./data/zip.zip`)
+func ZipWriter(path string) error {
+	outFile, err := os.Create(`./data/archive.zip`)
 	if err != nil {
 		errorLogger.Printf("%s", err.Error())
+		return err
 	}
 	defer outFile.Close()
 	w := zip.NewWriter(outFile)
 	addFiles(w, path, "")
 	if err != nil {
 		errorLogger.Printf("%s", err.Error())
+		return err
 	}
 	err = w.Close()
 	if err != nil {
 		errorLogger.Printf("%s", err.Error())
+		return err
 	}
+	return nil
 }
 
 func addFiles(w *zip.Writer, basePath, baseInZip string) {

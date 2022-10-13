@@ -1,6 +1,7 @@
 package main
 
 import (
+	"TestTask/pkg/server"
 	"TestTask/pkg/utils"
 )
 
@@ -23,6 +24,5 @@ func init() {
 }
 
 func main() {
-	utils.ZipWriter("./data/static/html/clients/")
-	//server.Start(":8080")
+	server.Start(":8080")
 }
